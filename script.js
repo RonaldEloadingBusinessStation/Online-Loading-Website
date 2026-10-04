@@ -449,7 +449,9 @@ function selectPromo(name,price,net){
   updateSummary(name,price,net);$("order").scrollIntoView({behavior:"smooth"});
 }
 function updateSummary(name,price,net){
-  $("promoField").value=name;$("amountField").value=money(price);$("networkField").value=net;
+  $("promoField").value=decodeURIComponent(name);
+$("amountField").value=money(price);
+$("networkField").value=net;
   $("summary").innerHTML=`<b>Order Summary</b><p>Network: ${net}\nPromo: ${name}\nAmount: ${money(price)}\nOrder No.: ${$("orderNo").value}</p>`;
 }
 $("network").onchange=()=>{activeNetwork=$("network").value;renderPromos()};
@@ -515,3 +517,4 @@ $("clearBtn").onclick=()=>{ $("orderForm").reset();$("orderNo").value=orderNumbe
 $("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem("rel-dark",document.body.classList.contains("dark"))};
 if(localStorage.getItem("rel-dark")==="true")document.body.classList.add("dark");
 fillNetworks();renderPromos();
+
