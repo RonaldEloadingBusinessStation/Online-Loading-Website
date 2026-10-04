@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ronald E-Loading Business Station</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar"><div class="brand"><div class="logo"><img src="eloading.jpg" alt="Ronald E-Loading Business Station"></div><div><b>RONALD</b><small>E-LOADING APP</small></div></div><button id="themeBtn" class="icon-btn" type="button">🌙</button></header>
+
+<main>
+  <section class="app-hero">
+  <div class="hero-copy">
+    <a class="status-pill" href="#order" aria-label="Online ordering - go to order"><i></i><span>ONLINE</span>&nbsp; FAST • SAFE • AFFORDABLE</a>
+    <h1 class="glow-title">Load. Pay.<br><span>Done.</span></h1>
+    <p>Choose a network, pick your promo, pay, and send your order in a few easy steps.</p>
+    <div class="hero-actions">
+      <a href="#promos" class="primary-btn">Browse Promos <b>→</b></a>
+      <a href="#order" class="outline-btn">Place an Order</a>
+    </div>
+  </div>
+  <div class="hero-card">
+    <span>RONALD E-LOADING BUSINESS STATION</span>
+    <strong>ALL NETWORKS</strong>
+    <small>SMART • TNT • DITO • GLOBE • TM • GOMO</small>
+    <div class="mini-status"><i></i> Orders accepted online</div>
+  </div>
+</section>
+
+  <section class="section" id="promos">
+    <div class="section-head">
+      <div><span class="eyebrow">STEP 1</span><h2>Choose Network</h2></div>
+      <input id="search" class="search" type="search" placeholder="Search promo...">
+    </div>
+    <div id="networkGrid" class="network-grid"></div>
+    <div id="promoGrid" class="promo-grid"></div>
+  </section>
+
+  <section class="section order-section" id="order">
+    <div class="section-head">
+      <div><span class="eyebrow">STEP 2</span><h2>Complete Order</h2></div>
+      <button id="clearBtn" class="secondary-btn" type="button">Clear</button>
+    </div>
+
+    <form id="orderForm" action="https://formsubmit.co/ronaldeloadingbusinessstation@gmail.com" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_subject" value="NEW RONALD E-LOADING ORDER">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" id="orderNo" name="Order Number">
+      <input type="hidden" id="amountField" name="Amount">
+      <input type="hidden" id="promoField" name="Promo">
+      <input type="hidden" id="networkField" name="Network">
+
+      <div class="form-grid">
+        <label>Customer Name
+          <input id="customerName" name="Customer Name" required placeholder="Full name">
+        </label>
+        <label>Mobile Number
+          <input id="mobile" name="Mobile Number" required inputmode="numeric" maxlength="11" placeholder="09xxxxxxxxx">
+        </label>
+        <label>Network
+          <select id="network" name="Network Selected" required>
+            <option value="">Select network</option>
+          </select>
+        </label>
+        <label>Promo
+          <select id="promo" name="Promo Selected" required>
+            <option value="">Select promo</option>
+          </select>
+        </label>
+        <label>Payment Method
+          <select id="payment" name="Payment Method" required>
+            <option value="">Select payment</option>
+            <option>GCash</option>
+            <option>Maya</option>
+            <option>GoTyme Bank</option>
+            <option>MariBank</option>
+          </select>
+        </label>
+        <label>Reference / Transaction No. (optional)
+          <input name="Reference Number" placeholder="If available">
+        </label>
+      </div>
+
+      <div id="paymentBox" class="payment-box">
+        <b>Payment details</b>
+        <p>Choose a payment method to display the account details.</p>
+      </div>
+
+      <label class="upload">Payment Screenshot
+        <input id="screenshot" type="file" name="Payment Screenshot" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
+        <small>Attach your payment proof (JPG, JPEG, or PNG only).</small>
+      </label>
+
+      <div id="summary" class="summary">
+        <b>Order Summary</b>
+        <p>No promo selected yet.</p>
+      </div>
+
+      <button class="primary-btn submit-btn" type="submit">Submit Order</button>
+      <p class="notice">After submitting, your order details will be sent to the business email. Please keep your payment proof.</p>
+    </form>
+  </section>
+<section class="features section" id="features">
+  <div class="feature-item"><div class="feature-icon">✓</div><div><b>Simple ordering</b><small>No login required</small></div></div>
+  <div class="feature-item"><div class="feature-icon">🔒</div><div><b>Payment proof</b><small>Attach before sending</small></div></div>
+  <div class="feature-item"><div class="feature-icon">⚡</div><div><b>Fast processing</b><small>Orders sent directly</small></div></div>
+</section>
+</main>
+
+<footer>
+  <div class="footer-brand"><div class="footer-logo"><img src="eloading.jpg" alt="Ronald E-Loading"></div><div><b>RONALD E-LOADING BUSINESS STATION</b><small>Fast • Safe • Affordable</small></div></div>
+  <p>Facebook: Ronald San Pedro Petilo Jr.</p>
+  <small>© 2026 Ronald E-Loading Business Station</small>
+</footer>
+<nav class="bottom-nav">
+  <a href="#">⌂<span>Home</span></a>
+  <a href="#promos">▦<span>Promos</span></a>
+  <a href="#order">＋<span>Order</span></a>
+  <a href="#order">◉<span>Payment</span></a>
+</nav>
+<script src="script.js"></script>
+</body>
+</html>
