@@ -441,7 +441,9 @@ GLOBE:"assets/networks/globe.png",
 TM:"assets/networks/tm.png",
 GOMO:"assets/networks/gomo.png",
 GFIBER:"assets/networks/gfiber.png",
-"GLOBE AT HOME":"assets/networks/globeathome.png"
+"GLOBE AT HOME":"assets/networks/globeathome.png",
+"GTM Retailer balance":"assets/networks/gtmretbal.png",
+"Smart Load Wallet retailer balance":"assets/networks/smartretbal.png"
 };
 
 document.querySelectorAll(".network-card").forEach(b=>{
