@@ -430,9 +430,64 @@ let activeNetwork="";
 function money(n){return "₱"+Number(n).toLocaleString("en-PH")}
 function orderNumber(){const d=new Date();return `REL-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}-${Math.floor(1000+Math.random()*9000)}`}
 function fillNetworks(){
-  $("network").innerHTML='<option value="">Select network</option>'+NETWORKS.map(n=>`<option>${n}</option>`).join("");
-  $("networkGrid").innerHTML=NETWORKS.map(n=>`<button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">${n}</button>`).join("");
-  document.querySelectorAll(".network-card").forEach(b=>b.onclick=()=>{activeNetwork=b.dataset.net;$("network").value=activeNetwork;renderPromos();$("order").scrollIntoView({behavior:"smooth"});});
+  const logos = {
+    "SMART": "assets/networks/smart.png",
+    "TNT": "assets/networks/tnt.png",
+    "DITO": "assets/networks/dito.png",
+    "GLOBE": "assets/networks/globe.png",
+    "TM": "assets/networks/tm.png",
+    "GOMO": "assets/networks/gomo.png",
+    "GFIBER": "assets/networks/gfiber.png",
+    "GLOBE AT HOME": "assets/networks/globeathome.png"
+  };
+
+  const networks = [
+    "SMART",
+    "TNT",
+    "DITO",
+    "GLOBE",
+    "TM",
+    "GOMO",
+    "GFIBER",
+    "GLOBE AT HOME",
+    "GTM Retailer balance",
+    "Smart load wallet"
+  ];
+
+  let cards = "";
+
+  networks.forEach(function(n){
+  if(logos[n]){
+    cards += `
+      <button type="button" class="network-card" data-net="${n}">
+        <img class="network-logo-img" src="${logos[n]}" alt="${n} logo">
+        <span>${n}</span>
+      </button>
+    `;
+  } else {
+    cards += `
+      <button type="button" class="network-card" data-net="${n}">
+        <div class="network-text-logo">${n}</div>
+      </button>
+    `;
+  }
+});
+
+  $("networkGrid").innerHTML = cards;
+
+  document.querySelectorAll(".network-card").forEach(function(b){
+    b.onclick = function(){
+      activeNetwork = b.dataset.net;
+      $("network").value = activeNetwork;
+
+      document.querySelectorAll(".network-card").forEach(function(x){
+        x.classList.toggle("active", x === b);
+      });
+
+      renderPromos();
+      $("order").scrollIntoView({behavior:"smooth"});
+    };
+  });
 }
 function renderPromos(){
   const net=activeNetwork||$("network").value||"";
