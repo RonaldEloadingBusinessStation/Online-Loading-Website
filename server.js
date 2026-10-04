@@ -49,7 +49,7 @@ const upload = multer({
 app.use(express.static(__dirname));
 
 const clean = (value) =>
-  String(value ?? "")
+  decodeURIComponent(String(value ?? ""))
     .trim()
     .slice(0, 1000);
 
