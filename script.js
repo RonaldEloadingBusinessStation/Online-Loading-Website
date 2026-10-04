@@ -430,45 +430,26 @@ let activeNetwork="";
 function money(n){return "₱"+Number(n).toLocaleString("en-PH")}
 function orderNumber(){const d=new Date();return `REL-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}-${Math.floor(1000+Math.random()*9000)}`}
 function fillNetworks(){
-  const logos = {
-    "SMART":"assets/networks/smart.png",
-    "TNT":"assets/networks/tnt.png",
-    "DITO":"assets/networks/dito.png",
-    "GLOBE":"assets/networks/globe.png",
-    "TM":"assets/networks/tm.png",
-    "GOMO":"assets/networks/gomo.png",
-    "GFIBER":"assets/networks/gfiber.png",
-    "GLOBE AT HOME":"assets/networks/globeathome.png"
-  };
+  $("network").innerHTML='<option value="">Select network</option>'+NETWORKS.map(n=>`<option>${n}</option>`).join("");
+  $("networkGrid").innerHTML=NETWORKS.map(n=>`<button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">${n}</button>`).join("");
+  document.querySelectorAll(".network-card").forEach(b=>b.onclick=()=>{activeNetwork=b.dataset.net;$("network").value=activeNetwork;renderPromos();$("order").scrollIntoView({behavior:"smooth"});});
+  const logos={
+SMART:"assets/networks/smart.png",
+TNT:"assets/networks/tnt.png",
+DITO:"assets/networks/dito.png",
+GLOBE:"assets/networks/globe.png",
+TM:"assets/networks/tm.png",
+GOMO:"assets/networks/gomo.png",
+GFIBER:"assets/networks/gfiber.png",
+"GLOBE AT HOME":"assets/networks/globeathome.png"
+};
 
-  $("network").innerHTML =
-    '<option value="">Select network</option>' +
-    NETWORKS.map(n => <option>${n}</option>).join("");
-
-  $("networkGrid").innerHTML =
-    NETWORKS.map(n => {
-      if(logos[n]){
-        return `
-          <button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">
-            <img class="network-logo-img" src="${logos[n]}" alt="${n}">
-            <span>${n}</span>
-          </button>
-        `;
-      }
-
-      return `
-        <button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">
-          <span>${n}</span>
-        </button>
-      `;
-    }).join("");
-
-  document.querySelectorAll(".network-card").forEach(b => b.onclick = () => {
-    activeNetwork = b.dataset.net;
-    $("network").value = activeNetwork;
-    renderPromos();
-    $("order").scrollIntoView({behavior:"smooth"});
-  });
+document.querySelectorAll(".network-card").forEach(b=>{
+  const logo=logos[b.dataset.net];
+  if(logo){
+    b.insertAdjacentHTML("afterbegin",`<img class="network-logo-img" src="${logo}" alt="${b.dataset.net}">`);
+  }
+});
 }
 function renderPromos(){
   const net=activeNetwork||$("network").value||"";
