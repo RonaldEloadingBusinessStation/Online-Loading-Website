@@ -431,62 +431,43 @@ function money(n){return "₱"+Number(n).toLocaleString("en-PH")}
 function orderNumber(){const d=new Date();return `REL-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}-${Math.floor(1000+Math.random()*9000)}`}
 function fillNetworks(){
   const logos = {
-    "SMART": "assets/networks/smart.png",
-    "TNT": "assets/networks/tnt.png",
-    "DITO": "assets/networks/dito.png",
-    "GLOBE": "assets/networks/globe.png",
-    "TM": "assets/networks/tm.png",
-    "GOMO": "assets/networks/gomo.png",
-    "GFIBER": "assets/networks/gfiber.png",
-    "GLOBE AT HOME": "assets/networks/globeathome.png"
+    "SMART":"assets/networks/smart.png",
+    "TNT":"assets/networks/tnt.png",
+    "DITO":"assets/networks/dito.png",
+    "GLOBE":"assets/networks/globe.png",
+    "TM":"assets/networks/tm.png",
+    "GOMO":"assets/networks/gomo.png",
+    "GFIBER":"assets/networks/gfiber.png",
+    "GLOBE AT HOME":"assets/networks/globeathome.png"
   };
 
-  const networks = [
-    "SMART",
-    "TNT",
-    "DITO",
-    "GLOBE",
-    "TM",
-    "GOMO",
-    "GFIBER",
-    "GLOBE AT HOME",
-    "GTM Retailer balance",
-    "Smart load wallet"
-  ];
+  $("network").innerHTML =
+    '<option value="">Select network</option>' +
+    NETWORKS.map(n => <option>${n}</option>).join("");
 
-  let cards = "";
+  $("networkGrid").innerHTML =
+    NETWORKS.map(n => {
+      if(logos[n]){
+        return `
+          <button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">
+            <img class="network-logo-img" src="${logos[n]}" alt="${n}">
+            <span>${n}</span>
+          </button>
+        `;
+      }
 
-  networks.forEach(function(n){
-  if(logos[n]){
-    cards += `
-      <button type="button" class="network-card" data-net="${n}">
-        <img class="network-logo-img" src="${logos[n]}" alt="${n} logo">
-        <span>${n}</span>
-      </button>
-    `;
-  } else {
-    cards += `
-      <button type="button" class="network-card" data-net="${n}">
-        <div class="network-text-logo">${n}</div>
-      </button>
-    `;
-  }
-});
+      return `
+        <button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">
+          <span>${n}</span>
+        </button>
+      `;
+    }).join("");
 
-  $("networkGrid").innerHTML = cards;
-
-  document.querySelectorAll(".network-card").forEach(function(b){
-    b.onclick = function(){
-      activeNetwork = b.dataset.net;
-      $("network").value = activeNetwork;
-
-      document.querySelectorAll(".network-card").forEach(function(x){
-        x.classList.toggle("active", x === b);
-      });
-
-      renderPromos();
-      $("order").scrollIntoView({behavior:"smooth"});
-    };
+  document.querySelectorAll(".network-card").forEach(b => b.onclick = () => {
+    activeNetwork = b.dataset.net;
+    $("network").value = activeNetwork;
+    renderPromos();
+    $("order").scrollIntoView({behavior:"smooth"});
   });
 }
 function renderPromos(){
@@ -504,9 +485,7 @@ function selectPromo(name,price,net){
   updateSummary(name,price,net);$("order").scrollIntoView({behavior:"smooth"});
 }
 function updateSummary(name,price,net){
-  $("promoField").value=decodeURIComponent(name);
-$("amountField").value=money(price);
-$("networkField").value=net;
+  $("promoField").value=name;$("amountField").value=money(price);$("networkField").value=net;
   $("summary").innerHTML=`<b>Order Summary</b><p>Network: ${net}\nPromo: ${name}\nAmount: ${money(price)}\nOrder No.: ${$("orderNo").value}</p>`;
 }
 $("network").onchange=()=>{activeNetwork=$("network").value;renderPromos()};
@@ -554,7 +533,7 @@ $("orderForm").addEventListener("submit",async e=>{
     const data=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(data.error||"Unable to submit the order.");
     status.textContent=`Order ${data.orderNumber||$("orderNo").value} received successfully.`;
-    alert("Order submitted successfully!\n\nYOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.\nTHANK YOU, PLEASE COME AGAIN!");
+    alert("Order submitted successfully!");
     $("orderForm").reset();
     $("orderNo").value=orderNumber();
     activeNetwork=""; fillNetworks(); renderPromos();
@@ -572,6 +551,3 @@ $("clearBtn").onclick=()=>{ $("orderForm").reset();$("orderNo").value=orderNumbe
 $("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem("rel-dark",document.body.classList.contains("dark"))};
 if(localStorage.getItem("rel-dark")==="true")document.body.classList.add("dark");
 fillNetworks();renderPromos();
-
-
-
