@@ -256,23 +256,17 @@ app.post(
       const message =
         makeMessage(req.body);
 
-      // Send order details to Telegram
-      await sendTelegramMessage(
-        message
-      );
-
-      // Send payment screenshot
+      // Send order details and payment screenshot together
       if (req.file) {
         await sendTelegramPhoto(
           req.file.path,
           req.file.originalname,
           req.file.mimetype,
-          `Payment screenshot — Order ${clean(
-            req.body["Order Number"]
-          )}`
+          message
         );
+      } else {
+        await sendTelegramMessage(message);
       }
-
       // Save order record
       const record = {
         receivedAt:
@@ -366,3 +360,5 @@ app.listen(
     );
   }
 );
+
+
