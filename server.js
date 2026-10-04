@@ -111,10 +111,17 @@ function makeMessage(body) {
     )}`,
 
     `Payment: ${clean(
-      body["Payment Method"]
-    )}`,
+  body["Payment Method"]
+)}`,
 
-    `Reference: ${
+`Time: ${new Date().toLocaleString("en-PH", {
+  timeZone: "Asia/Manila",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true
+})}`,
+
+`Reference: ${
       clean(body["Reference Number"]) ||
       "N/A"
     }`
@@ -360,5 +367,7 @@ app.listen(
     );
   }
 );
+
+
 
 
