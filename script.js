@@ -539,6 +539,9 @@ fillNetworks();renderPromos();
 
 
 
-$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.location.href=window.location.pathname;};
+$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.location.hash="home";};
+
+
+
 
 
