@@ -515,7 +515,7 @@ $("orderForm").addEventListener("submit",async e=>{
     const res=await fetch("https://online-loading-website.onrender.com/api/orders",{method:"POST",body:fd});
     const data=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(data.error||"Unable to submit the order.");
-    status.textContent=""; $("successModal").hidden=false;
+    status.textContent=""; alert("Order submitted successfully!\n\nYOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.\n\nTHANK YOU, COME AGAIN!"); window.location.href="https://ronaldeloadingbusinessstation.github.io/Online-Loading-Website/#home";
     
     $("orderForm").reset();
     $("orderNo").value=orderNumber();
@@ -540,6 +540,7 @@ fillNetworks();renderPromos();
 
 
 window.addEventListener("DOMContentLoaded",()=>{$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.location.href="https://ronaldeloadingbusinessstation.github.io/Online-Loading-Website/#home";};});
+
 
 
 
