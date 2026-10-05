@@ -516,7 +516,7 @@ $("orderForm").addEventListener("submit",async e=>{
     const data=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(data.error||"Unable to submit the order.");
     status.innerHTML=`<b>Order submitted successfully!</b><br><br>YOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.<br>THANK YOU, PLEASE COME AGAIN!`;
-    alert("Order submitted successfully!");
+    
     $("orderForm").reset();
     $("orderNo").value=orderNumber();
     activeNetwork=""; fillNetworks(); renderPromos();
@@ -534,4 +534,6 @@ $("clearBtn").onclick=()=>{ $("orderForm").reset();$("orderNo").value=orderNumbe
 $("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem("rel-dark",document.body.classList.contains("dark"))};
 if(localStorage.getItem("rel-dark")==="true")document.body.classList.add("dark");
 fillNetworks();renderPromos();
+
+
 
