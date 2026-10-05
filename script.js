@@ -515,7 +515,7 @@ $("orderForm").addEventListener("submit",async e=>{
     const res=await fetch("https://online-loading-website.onrender.com/api/orders",{method:"POST",body:fd});
     const data=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(data.error||"Unable to submit the order.");
-    status.textContent=`Order ${data.orderNumber||$("orderNo").value} received successfully.`;
+    status.innerHTML=`<b>Order submitted successfully!</b><br><br>YOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.<br>THANK YOU, PLEASE COME AGAIN!`;
     alert("Order submitted successfully!");
     $("orderForm").reset();
     $("orderNo").value=orderNumber();
@@ -534,3 +534,4 @@ $("clearBtn").onclick=()=>{ $("orderForm").reset();$("orderNo").value=orderNumbe
 $("themeBtn").onclick=()=>{document.body.classList.toggle("dark");localStorage.setItem("rel-dark",document.body.classList.contains("dark"))};
 if(localStorage.getItem("rel-dark")==="true")document.body.classList.add("dark");
 fillNetworks();renderPromos();
+
