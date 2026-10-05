@@ -539,7 +539,8 @@ fillNetworks();renderPromos();
 
 
 
-$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.scrollTo({top:0,left:0,behavior:"smooth"});};
+$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();document.getElementById("home").scrollIntoView({behavior:"smooth",block:"start"});};
+
 
 
 
