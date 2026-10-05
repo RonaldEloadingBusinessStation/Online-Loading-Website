@@ -539,7 +539,8 @@ fillNetworks();renderPromos();
 
 
 
-$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.location.href="./#home";};
+$("successModalOk").onclick=()=>{$("successModal").hidden=true;$("orderForm").reset();window.location.href="https://ronaldeloadingbusinessstation.github.io/Online-Loading-Website/#home";};
+
 
 
 
