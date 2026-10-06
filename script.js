@@ -739,6 +739,7 @@ if (trackBtn) {
       if (!res.ok) throw new Error(d.error || "Order not found.");
       const isML = String(d.orderType).toLowerCase().includes("mlbb") || String(d.network).toLowerCase() === "mlbb";
       const completed = d.status === "COMPLETED";
+      window.currentReceiptData = d;
       const maskMobile = (v) => String(v ?? "").trim() || "—";
       const receiptCustomer = String(d.customer ?? "").trim() || "Customer";
       result.innerHTML = `<div class="order-result-card receipt-card ${completed ? "completed" : "processing"}">
@@ -761,9 +762,32 @@ if (trackBtn) {
         </div>
         <div class="receipt-divider"></div>
         <div class="receipt-note">Official customer/reseller proof of successful loading. Keep this receipt together with your Order Number.</div>
-        ${completed ? `<button type="button" class="primary-btn receipt-print-btn" onclick="window.print()">🧾 PRINT / SAVE RECEIPT</button>` : ""}
+        ${completed ? `<div class="receipt-actions"><button type="button" class="primary-btn receipt-print-btn" onclick="downloadReceiptImage()">🧾 SAVE RECEIPT TO PHONE</button><button type="button" class="secondary-btn receipt-print-btn" onclick="window.print()">🖨️ PRINT RECEIPT</button></div>` : ""}
       </div>`;
     } catch (err) { result.innerHTML = `<b>Order Status</b><p>${escapeTrack(err.message)}</p>`; }
   });
 }
+
+function downloadReceiptImage(){
+  const d=window.currentReceiptData||{};
+  const isML=String(d.orderType||'').toLowerCase().includes('mlbb')||String(d.network||'').toLowerCase()==='mlbb';
+  const esc=(v)=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const rows=[
+    ['Customer',d.customer||'Customer'],['Order Type',d.orderType||''],['Network',d.network||''],
+    ...(isML?[['User ID',d.userId||''],['Zone ID',d.zoneId||'']]:[['Mobile',d.mobile||'']]),
+    ['Promo',d.promo||''],['Amount',d.amount||''],['Payment',d.payment||'Paid'],['Order Time',d.orderTime||''],['Status',d.status||''],
+    ...(d.successfulTime?[['Successful Time',d.successfulTime]]:[])
+  ];
+  const lineH=52, top=330, height=Math.max(900,top+rows.length*lineH+220), w=900;
+  let y=top;
+  const svgRows=rows.map(([k,v])=>{const out=`<text x="70" y="${y}" font-size="26" fill="#667085">${esc(k)}</text><text x="830" y="${y}" text-anchor="end" font-size="27" font-weight="700" fill="#101828">${esc(v)}</text><line x1="70" y1="${y+16}" x2="830" y2="${y+16}" stroke="#eaecf0"/>`; y+=lineH; return out;}).join('');
+  const order=esc(d.orderNumber||'');
+  const status=d.status==='COMPLETED'?'ORDER COMPLETED':'ORDER PROCESSING';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}"><rect width="100%" height="100%" fill="#f2f4f7"/><rect x="35" y="35" width="830" height="${height-70}" rx="18" fill="#fff" stroke="#d0d5dd" stroke-width="2"/><text x="450" y="95" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" font-weight="800" fill="#101828">RONALD E-LOADING BUSINESS STATION</text><text x="450" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#667085">OFFICIAL LOADING RECEIPT</text><line x1="70" y1="160" x2="830" y2="160" stroke="#98a2b3" stroke-dasharray="8 8"/><text x="450" y="215" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#067647">✓ ${status}</text><text x="450" y="265" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="800" fill="#101828">${order}</text><line x1="70" y1="290" x2="830" y2="290" stroke="#98a2b3" stroke-dasharray="8 8"/>${svgRows}<line x1="70" y1="${y+8}" x2="830" y2="${y+8}" stroke="#98a2b3" stroke-dasharray="8 8"/><text x="450" y="${y+65}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#667085">Keep this receipt with your Order Number.</text><text x="450" y="${y+98}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#101828">RONALD E-LOADING BUSINESS STATION</text></svg>`;
+  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);URL.revokeObjectURL(url);c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Receipt-${order||'Order'}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);},'image/png');};
+  img.src=url;
+}
+
 function escapeTrack(v){return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
