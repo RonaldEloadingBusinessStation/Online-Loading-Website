@@ -710,3 +710,36 @@ if($("mlOrderNo")){
     }catch(err){status.textContent=err.message;alert(err.message)}finally{btn.disabled=false}
   });
 }
+
+
+// ===============================
+// ORDER STATUS / TRACKING
+// ===============================
+const trackBtn = $("trackBtn");
+if (trackBtn) {
+  trackBtn.addEventListener("click", async () => {
+    const no = $("trackOrderNo").value.trim();
+    const result = $("trackResult");
+    if (!no) { alert("Please enter your Order Number."); return; }
+    result.hidden = false;
+    result.innerHTML = "Checking order status…";
+    try {
+      const res = await fetch(`https://online-loading-website.onrender.com/api/orders/${encodeURIComponent(no)}`);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Order not found.");
+      const isML = String(d.orderType).toLowerCase().includes("mlbb") || String(d.network).toLowerCase() === "mlbb";
+      result.innerHTML = `<b>Order Status</b><p><strong>${d.status === "COMPLETED" ? "🟢 ORDER COMPLETED" : "🟡 ORDER PROCESSING"}</strong><br><br>
+        <b>Order No.:</b> ${escapeTrack(d.orderNumber)}<br>
+        <b>Customer:</b> ${escapeTrack(d.customer)}<br>
+        <b>Order Type:</b> ${escapeTrack(d.orderType)}<br>
+        <b>Network:</b> ${escapeTrack(d.network)}<br>
+        ${isML ? `<b>User ID:</b> ${escapeTrack(d.userId)}<br><b>Zone ID:</b> ${escapeTrack(d.zoneId)}<br>` : `<b>Mobile:</b> ${escapeTrack(d.mobile)}<br>`}
+        <b>Promo:</b> ${escapeTrack(d.promo)}<br>
+        <b>Amount:</b> ${escapeTrack(d.amount)}<br>
+        <b>Payment:</b> ${escapeTrack(d.payment)}<br>
+        <b>Order Time:</b> ${escapeTrack(d.orderTime)}<br>
+        <b>Status:</b> ${escapeTrack(d.status)}${d.successfulTime ? `<br><b>Successful Time:</b> ${escapeTrack(d.successfulTime)}` : ""}</p>`;
+    } catch (err) { result.innerHTML = `<b>Order Status</b><p>${escapeTrack(err.message)}</p>`; }
+  });
+}
+function escapeTrack(v){return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}

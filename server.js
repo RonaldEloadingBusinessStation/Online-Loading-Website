@@ -53,6 +53,35 @@ const clean = (value) =>
     .trim()
     .slice(0, 1000);
 
+const ORDERS_FILE = path.join(__dirname, "orders-status.json");
+function readOrders() {
+  try { return JSON.parse(fs.readFileSync(ORDERS_FILE, "utf8")); }
+  catch { return {}; }
+}
+function writeOrders(orders) {
+  fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
+}
+function manilaParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila", year: "numeric", month: "long", day: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true
+  }).formatToParts(date);
+  const get = type => parts.find(p => p.type === type)?.value || "";
+  return {
+    date: `${get("month")} ${get("day")}, ${get("year")}`,
+    time: `${get("hour")}:${get("minute")} ${get("dayPeriod")}`
+  };
+}
+function manilaDateTime(date = new Date()) {
+  const p = manilaParts(date);
+  return `${p.date} ${p.time}`;
+}
+function adminAuthorized(req) {
+  const key = process.env.ADMIN_KEY;
+  if (!key) return false;
+  return String(req.headers["x-admin-key"] || req.query.key || req.body?.key || "") === key;
+}
+
 // ===============================
 // TELEGRAM CONFIG
 // ===============================
@@ -286,25 +315,21 @@ app.post(
       } else {
         await sendTelegramMessage(message);
       }
-      // Save order record
+      // Save order + customer-facing status
+      const orderNumber = clean(req.body["Order Number"]);
+      const orders = readOrders();
+      const now = new Date();
       const record = {
-        receivedAt:
-          new Date().toISOString(),
-
-        fields:
-          req.body,
-
-        screenshot:
-          req.file
-            ? req.file.filename
-            : null,
-
-        telegramNotification:
-          true,
-
-        telegramScreenshot:
-          !!req.file
+        orderNumber,
+        orderTime: manilaDateTime(now),
+        status: "PROCESSING",
+        successfulTime: null,
+        fields: req.body,
+        telegramNotification: true,
+        telegramScreenshot: !!req.file
       };
+      orders[orderNumber] = record;
+      writeOrders(orders);
 
       fs.appendFileSync(
         path.join(
@@ -318,10 +343,7 @@ app.post(
       return res.status(200).json({
         ok: true,
 
-        orderNumber:
-          clean(
-            req.body["Order Number"]
-          ),
+        orderNumber,
 
         telegramNotification:
           true,
@@ -345,6 +367,77 @@ app.post(
     }
   }
 );
+
+// ===============================
+// CUSTOMER ORDER STATUS
+// ===============================
+
+app.get("/api/orders/:orderNumber", (req, res) => {
+  const order = readOrders()[clean(req.params.orderNumber)];
+  if (!order) return res.status(404).json({ ok: false, error: "Order not found." });
+  const f = order.fields || {};
+  res.json({
+    ok: true,
+    orderNumber: order.orderNumber,
+    customer: clean(f["Customer Name"]),
+    orderType: clean(f["Order Type"] || "Regular Loading"),
+    network: clean(f["Network Selected"] || f["Network"]),
+    mobile: clean(f["Mobile Number"]),
+    userId: clean(f["MLBB User ID"]),
+    zoneId: clean(f["MLBB Zone ID"]),
+    promo: clean(f["Promo Selected"] || f["Promo"]),
+    amount: clean(f["Amount"]),
+    payment: clean(f["Payment Method"]),
+    orderTime: order.orderTime,
+    status: order.status,
+    successfulTime: order.successfulTime
+  });
+});
+
+// ===============================
+// ADMIN: MARK ORDER COMPLETED
+// ===============================
+
+app.post("/api/admin/orders/:orderNumber/complete", express.json(), async (req, res) => {
+  if (!adminAuthorized(req)) return res.status(401).json({ ok: false, error: "Unauthorized." });
+  const orders = readOrders();
+  const key = clean(req.params.orderNumber);
+  const order = orders[key];
+  if (!order) return res.status(404).json({ ok: false, error: "Order not found." });
+  if (order.status === "COMPLETED") return res.json({ ok: true, order });
+  order.status = "COMPLETED";
+  order.successfulTime = manilaDateTime(new Date());
+  writeOrders(orders);
+  const f = order.fields || {};
+  const msg = [
+    "🟢 ORDER COMPLETED",
+    `Order No.: ${order.orderNumber}`,
+    `Customer: ${clean(f["Customer Name"])}`,
+    `Order Type: ${clean(f["Order Type"] || "Regular Loading")}`,
+    `Network: ${clean(f["Network Selected"] || f["Network"])}`,
+    ...(String(f["Network"] || "").toLowerCase() === "mlbb" ? [`User ID: ${clean(f["MLBB User ID"])}`, `Zone ID: ${clean(f["MLBB Zone ID"])}`] : [`Mobile: ${clean(f["Mobile Number"])}`]),
+    `Promo: ${clean(f["Promo Selected"] || f["Promo"])}`,
+    `Amount: ${clean(f["Amount"])}`,
+    `Payment: ${clean(f["Payment Method"])}`,
+    `Date: ${manilaParts(new Date()).date}`,
+    `Order Time: ${order.orderTime.slice(order.orderTime.indexOf(",") + 1).trim()}`,
+    `Status: COMPLETED at ${manilaParts(new Date()).time}`
+  ].join("\\n");
+  try { await sendTelegramMessage(msg); } catch (e) { console.error("Completion Telegram notification failed:", e.message); }
+  res.json({ ok: true, order });
+});
+
+// ===============================
+// SIMPLE ADMIN PAGE
+// ===============================
+
+app.get("/admin", (req, res) => {
+  if (!adminAuthorized(req)) return res.status(401).send("Unauthorized. Open /admin?key=YOUR_ADMIN_KEY");
+  const orders = Object.values(readOrders()).reverse();
+  const rows = orders.map(o => `<tr><td>${escapeHtml(o.orderNumber)}</td><td>${escapeHtml(o.fields?.["Customer Name"] || "")}</td><td>${escapeHtml(o.status)}</td><td>${escapeHtml(o.orderTime)}</td><td>${escapeHtml(o.successfulTime || "—")}</td><td>${o.status === "COMPLETED" ? "✅ Completed" : `<button onclick="completeOrder('${encodeURIComponent(o.orderNumber)}')">✅ COMPLETED</button>`}</td></tr>`).join("");
+  res.send(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ronald Admin</title><style>body{font-family:Arial,sans-serif;padding:20px;background:#f5f7fb}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border:1px solid #ddd;text-align:left}button{padding:8px 12px;border:0;border-radius:8px;cursor:pointer}h1{font-size:22px}@media(max-width:700px){table{font-size:12px}th,td{padding:6px}}</style></head><body><h1>RONALD E-LOADING — ADMIN</h1><p>Click <b>COMPLETED</b> only after the load/top-up is actually successful.</p><table><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Order Time</th><th>Successful Time</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No orders yet.</td></tr>'}</tbody></table><script>const KEY=${JSON.stringify(String(req.query.key||""))};async function completeOrder(no){if(!confirm('Confirm this order is successfully loaded?'))return;const r=await fetch('/api/admin/orders/'+no+'/complete?key='+encodeURIComponent(KEY),{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)alert(d.error||'Failed');else location.reload();}</script></body></html>`);
+});
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));}
 
 // ===============================
 // HEALTH CHECK

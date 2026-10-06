@@ -179,6 +179,16 @@
     </div>
   </form>
 </section>
+
+<section class="section" id="track-order">
+  <div class="section-head"><div><span class="eyebrow">ORDER STATUS</span><h2>Track Your Order</h2></div></div>
+  <p>Enter your Order Number to check if your order is still processing or already successfully loaded.</p>
+  <div class="track-box">
+    <input id="trackOrderNo" placeholder="Enter Order Number" autocomplete="off">
+    <button id="trackBtn" class="primary-btn" type="button">Check Status</button>
+  </div>
+  <div id="trackResult" class="summary" hidden></div>
+</section>
 <section class="features section" id="features">
   <div class="feature-item"><div class="feature-icon">✓</div><div><b>Simple ordering</b><small>No login required</small></div></div>
   <div class="feature-item"><div class="feature-icon">🔒</div><div><b>Payment proof</b><small>Attach before sending</small></div></div>
@@ -202,6 +212,7 @@
   <div class="success-modal-backdrop"></div>
   <div class="success-modal-box" role="dialog" aria-modal="true" aria-labelledby="successModalTitle">
     <h3 id="successModalTitle">Order submitted successfully!</h3>
+    <p class="receipt-hint">📌 Save your Order Number to check your status and successful load time.</p>
     <p>YOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.</p>
     <p>THANK YOU, COME AGAIN!</p>
     <button type="button" id="successModalOk">OK</button>
