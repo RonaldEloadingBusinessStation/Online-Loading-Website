@@ -81,6 +81,13 @@ function getTelegramConfig() {
 // ===============================
 
 function makeMessage(body) {
+  const orderType = clean(body["Order Type"] || body["OrderType"] || "");
+  const network = clean(body["Network Selected"] || body["Network"] || "");
+  const isMLBB = orderType.toLowerCase() === "mlbb top up" || network.toLowerCase() === "mlbb";
+  const customer = clean(body["Customer Name"] || body["Customer"] || body["Name"] || "");
+  const userId = clean(body["MLBB User ID"] || body["User ID"] || body["userId"] || "");
+  const zoneId = clean(body["MLBB Zone ID"] || body["Zone ID"] || body["zoneId"] || "");
+
   return [
     "🔔 NEW RONALD E-LOADING ORDER",
 
@@ -88,18 +95,23 @@ function makeMessage(body) {
       body["Order Number"]
     )}`,
 
-    `Customer: ${clean(
-      body["Customer Name"]
-    )}`,
+    `Customer: ${clean(body["Customer Name"] || body["Customer"] || body["Name"])}`,
 
-    `Mobile: ${clean(
-      body["Mobile Number"]
-    )}`,
+    ...(body["Order Type"] === "MLBB Top Up" || body["Network"] === "MLBB" ? [] : [
+      `Mobile: ${clean(body["Mobile Number"] || body["Mobile"])}`
+    ]),
+
+    `Order Type: ${clean(body["Order Type"] || "Regular Loading")}`,
 
     `Network: ${clean(
       body["Network Selected"] ||
       body["Network"]
     )}`,
+
+    ...(body["Order Type"] === "MLBB Top Up" || body["Network"] === "MLBB" ? [
+      `User ID: ${clean(body["MLBB User ID"] || body["User ID"])}`,
+      `Zone ID: ${clean(body["MLBB Zone ID"] || body["Zone ID"])}`
+    ] : []),
 
     `Promo: ${clean(
       body["Promo Selected"] ||

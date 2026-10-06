@@ -635,3 +635,78 @@ window.addEventListener("DOMContentLoaded",()=>{
 
 
 
+
+
+// ===============================
+// MLBB TOP UP
+// ===============================
+const mlbbLauncher = $("mlbbLauncher");
+const mlbbForm = $("mlbbForm");
+if (mlbbLauncher && mlbbForm) {
+  mlbbLauncher.addEventListener("click", () => {
+    const open = mlbbForm.classList.toggle("mlbb-form-hidden");
+    mlbbLauncher.setAttribute("aria-expanded", String(!open));
+    mlbbLauncher.classList.toggle("is-open", !open);
+    if (!open) setTimeout(() => mlbbForm.scrollIntoView({behavior:"smooth", block:"start"}), 80);
+  });
+}
+const mlPaymentDetails=paymentDetails;
+function mlOrderNumber(){const d=new Date();return `MLT-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}-${Math.floor(1000+Math.random()*9000)}`}
+function updateMlSummary(name,price){
+  $("mlPromoField").value=name;
+  $("mlAmountField").value=money(price);
+  $("mlSummary").innerHTML=`<b>MLBB Order Summary</b><p>Customer: ${$("mlCustomerName").value.trim() || "—"}\nUser ID: ${$("mlUserId").value.trim() || "—"}\nZone ID: ${$("mlZoneId").value.trim() || "—"}\nPackage: ${name}\nAmount: ${money(price)}\nOrder No.: ${$("mlOrderNo").value}</p>`;
+}
+
+document.querySelectorAll(".ml-select-btn").forEach(btn=>btn.addEventListener("click",()=>{
+  const name=btn.dataset.mlName;
+  const price=Number(btn.dataset.mlPrice);
+  document.querySelectorAll(".ml-select-btn").forEach(b=>b.classList.remove("ml-selected"));
+  btn.classList.add("ml-selected");
+  updateMlSummary(name,price);
+  $("mlSummary").scrollIntoView({behavior:"smooth",block:"center"});
+}));
+
+if($("mlOrderNo")){
+  $("mlOrderNo").value=mlOrderNumber();
+  $("mlPayment").onchange=()=>{$("mlPaymentBox").innerHTML=$("mlPayment").value?`<b>${$("mlPayment").value}</b><p>${mlPaymentDetails[$("mlPayment").value]}</p>`:"<b>Payment details</b><p>Choose a payment method to display the account details.</p>"};
+  $("mlUserId").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
+  $("mlZoneId").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
+  $("mlCustomerName").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
+  $("mlScreenshot").addEventListener("change",e=>{
+    const file=e.target.files[0]; if(!file)return;
+    if(!["image/jpeg","image/png"].includes(file.type)){e.target.value="";alert("Payment screenshot must be JPG, JPEG, or PNG only.");return;}
+    if(file.size>10*1024*1024){e.target.value="";alert("Payment screenshot is too large. Please choose an image up to 10MB.");}
+  });
+  $("mlbbForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const uid=$("mlUserId").value.trim(), zid=$("mlZoneId").value.trim();
+    if(!/^\d+$/.test(uid)){alert("Please enter a valid MLBB User ID.");return}
+    if(!/^\d+$/.test(zid)){alert("Please enter a valid MLBB Zone ID.");return}
+    if(!$("mlPromoField").value){alert("Please select a Weekly Pass or Diamond package.");return}
+    $("mlOrderNo").value ||= mlOrderNumber();
+    updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")));
+    if(!confirm(`Send MLBB order ${$("mlOrderNo").value}?\n\nYour Name, User ID, Zone ID, package, payment details and screenshot will be sent to the business via Telegram.`))return;
+    const status=$("mlSubmitStatus"),btn=$("mlSubmitBtn");
+    status.textContent="Sending MLBB order…";btn.disabled=true;
+    try{
+      const fd=new FormData($("mlbbForm"));
+      const res=await fetch("https://online-loading-website.onrender.com/api/orders",{method:"POST",body:fd});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(data.error||"Unable to submit the MLBB order.");
+      status.textContent="Order submitted successfully! Your order is processing. Please wait.";
+      const successModal=$("successModal");
+      if(successModal){
+        $("successModalTitle").textContent="Order submitted successfully!";
+        const modalText=successModal.querySelector(".success-modal-box p");
+        if(modalText) modalText.textContent="YOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.";
+        successModal.hidden=false;
+        successModal.setAttribute("aria-hidden","false");
+      }
+      $("mlbbForm").reset();$("mlOrderNo").value=mlOrderNumber();$("mlPromoField").value="";$("mlAmountField").value="";
+      $("mlSummary").innerHTML="<b>MLBB Order Summary</b><p>No package selected yet.</p>";
+      $("mlPaymentBox").innerHTML="<b>Payment details</b><p>Choose a payment method to display the account details.</p>";
+      document.querySelectorAll(".ml-select-btn").forEach(b=>b.classList.remove("ml-selected"));
+    }catch(err){status.textContent=err.message;alert(err.message)}finally{btn.disabled=false}
+  });
+}
