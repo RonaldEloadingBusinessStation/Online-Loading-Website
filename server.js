@@ -130,7 +130,7 @@ function makeMessage(body) {
       `Mobile: ${clean(body["Mobile Number"] || body["Mobile"])}`
     ]),
 
-    `Order Type: ${clean(body["Order Type"] || "Regular Loading")}`,
+    `Order Type: ${((String(body["Order Type"] || "").toLowerCase().includes("mlbb") || String(body["Network"] || "").toLowerCase() === "mlbb") ? "ML" : "Loading")}`,
 
     `Network: ${clean(
       body["Network Selected"] ||
@@ -210,7 +210,7 @@ async function telegramRequest(
 // SEND TELEGRAM MESSAGE
 // ===============================
 
-async function sendTelegramMessage(text) {
+async function sendTelegramMessage(text, replyMarkup = null) {
   const { chatId } =
     getTelegramConfig();
 
@@ -232,6 +232,10 @@ async function sendTelegramMessage(text) {
     "true"
   );
 
+  if (replyMarkup) {
+    form.append("reply_markup", JSON.stringify(replyMarkup));
+  }
+
   return telegramRequest(
     "sendMessage",
     form
@@ -246,7 +250,8 @@ async function sendTelegramPhoto(
   filePath,
   originalName,
   mimeType,
-  caption
+  caption,
+  replyMarkup = null
 ) {
   const { chatId } =
     getTelegramConfig();
@@ -280,10 +285,179 @@ async function sendTelegramPhoto(
     caption.slice(0, 1024)
   );
 
+  if (replyMarkup) {
+    form.append("reply_markup", JSON.stringify(replyMarkup));
+  }
+
   return telegramRequest(
     "sendPhoto",
     form
   );
+}
+
+// ===============================
+// TELEGRAM RECEIPT + COMPLETED FLOW
+// ===============================
+
+function receiptUploadKeyboard(orderNumber) {
+  return {
+    inline_keyboard: [[
+      { text: "📎 UPLOAD RECEIPT", callback_data: `receipt_help:${orderNumber}` }
+    ]]
+  };
+}
+
+function completedKeyboard(orderNumber) {
+  return {
+    inline_keyboard: [[
+      { text: "✅ COMPLETED", callback_data: `complete:${orderNumber}` }
+    ]]
+  };
+}
+
+function completedMessage(order) {
+  const f = order.fields || {};
+  const isMLBB = String(f["Order Type"] || "").toLowerCase().includes("mlbb") || String(f["Network"] || "").toLowerCase() === "mlbb";
+  const successful = order.successfulTime || "";
+  return [
+    "🟢 ORDER COMPLETED",
+    `Order No.: ${order.orderNumber}`,
+    `Customer: ${clean(f["Customer Name"])}`,
+    `Order Type: ${isMLBB ? "ML" : "Loading"}`,
+    `Network: ${clean(f["Network Selected"] || f["Network"])}`,
+    ...(isMLBB ? [`User ID: ${clean(f["MLBB User ID"])}`, `Zone ID: ${clean(f["MLBB Zone ID"])}`] : [`Mobile: ${clean(f["Mobile Number"])}`]),
+    `Promo: ${clean(f["Promo Selected"] || f["Promo"])}`,
+    `Amount: ${clean(f["Amount"])}`,
+    `Payment: ${clean(f["Payment Method"])}`,
+    `Order Time: ${order.orderTime}`,
+    `Status: COMPLETED`,
+    `Successful Time: ${successful}`,
+    `🧾 Main receipt: attached above/below in this Telegram chat.`
+  ].join("\n");
+}
+
+async function markOrderCompleted(orderNumber) {
+  const orders = readOrders();
+  const key = clean(orderNumber);
+  const order = orders[key];
+  if (!order) throw new Error("Order not found.");
+  if (!order.receiptUploaded) throw new Error("Upload the MAIN RECEIPT first, then confirm the order.");
+  if (order.status !== "COMPLETED") {
+    order.status = "COMPLETED";
+    order.successfulTime = manilaDateTime(new Date());
+    writeOrders(orders);
+  }
+  return order;
+}
+
+function extractOrderNumberFromCaption(caption) {
+  const m = String(caption || "").match(/\b(?:REL|MLT)-\d{8}-\d{4,}\b/i);
+  return m ? m[0].toUpperCase() : "";
+}
+
+async function downloadTelegramFile(fileId, destination) {
+  const { token } = getTelegramConfig();
+  const fileForm = new FormData();
+  fileForm.append("file_id", fileId);
+  const result = await telegramRequest("getFile", fileForm);
+  const filePath = result.result.file_path;
+  const response = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
+  if (!response.ok) throw new Error("Unable to download Telegram receipt.");
+  const buffer = Buffer.from(await response.arrayBuffer());
+  fs.writeFileSync(destination, buffer);
+  return filePath;
+}
+
+async function handleTelegramReceipt(message) {
+  const { chatId } = getTelegramConfig();
+  if (String(message?.chat?.id) !== String(chatId)) return;
+  if (!message.photo?.length) return;
+  const orderNumber = extractOrderNumberFromCaption(message.caption);
+  if (!orderNumber) {
+    await sendTelegramMessage("📎 Receipt photo received, but I could not find the Order Number. Send it again with the caption: RECEIPT REL-YYYYMMDD-XXXX");
+    return;
+  }
+  const orders = readOrders();
+  const order = orders[orderNumber];
+  if (!order) {
+    await sendTelegramMessage(`❌ Order ${orderNumber} was not found.`);
+    return;
+  }
+  const largest = message.photo[message.photo.length - 1];
+  const receiptPath = path.join(UPLOAD_DIR, `receipt-${orderNumber}-${Date.now()}.jpg`);
+  await downloadTelegramFile(largest.file_id, receiptPath);
+  order.receiptUploaded = true;
+  order.receiptUploadedTime = manilaDateTime(new Date());
+  order.receiptTelegramFile = receiptPath;
+  writeOrders(orders);
+
+  await sendTelegramPhoto(
+    receiptPath,
+    `MAIN-RECEIPT-${orderNumber}.jpg`,
+    "image/jpeg",
+    `🧾 MAIN RECEIPT — ${orderNumber}\nReceipt uploaded successfully.\nReview the receipt, then click ✅ COMPLETED only after the load/top-up is actually successful.`,
+    completedKeyboard(orderNumber)
+  );
+}
+
+async function handleTelegramCallback(callbackQuery) {
+  const data = String(callbackQuery?.data || "");
+  const callbackId = callbackQuery.id;
+  try {
+    if (data.startsWith("receipt_help:")) {
+      const orderNumber = data.slice("receipt_help:".length);
+      const form = new FormData();
+      form.append("callback_query_id", callbackId);
+      form.append("text", "Send the MAIN RECEIPT photo here with caption: RECEIPT " + orderNumber);
+      form.append("show_alert", "true");
+      await telegramRequest("answerCallbackQuery", form);
+      return;
+    }
+    if (!data.startsWith("complete:")) return;
+    const orderNumber = data.slice("complete:".length);
+    const order = await markOrderCompleted(orderNumber);
+    const answerForm = new FormData();
+    answerForm.append("callback_query_id", callbackId);
+    answerForm.append("text", "Order marked COMPLETED.");
+    answerForm.append("show_alert", "false");
+    await telegramRequest("answerCallbackQuery", answerForm);
+    await sendTelegramMessage(completedMessage(order));
+  } catch (err) {
+    try {
+      const errorForm = new FormData();
+      errorForm.append("callback_query_id", callbackId);
+      errorForm.append("text", err.message || "Failed.");
+      errorForm.append("show_alert", "true");
+      await telegramRequest("answerCallbackQuery", errorForm);
+    } catch {}
+    console.error("Telegram callback failed:", err);
+  }
+}
+
+let telegramOffset = 0;
+let telegramPollingStarted = false;
+async function startTelegramPolling() {
+  if (telegramPollingStarted) return;
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) return;
+  telegramPollingStarted = true;
+  console.log("Telegram receipt + completed polling enabled.");
+  while (true) {
+    try {
+      const { token } = getTelegramConfig();
+      const url = `https://api.telegram.org/bot${token}/getUpdates?timeout=25&offset=${telegramOffset}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (!data.ok) throw new Error(JSON.stringify(data));
+      for (const update of data.result || []) {
+        telegramOffset = update.update_id + 1;
+        if (update.callback_query) await handleTelegramCallback(update.callback_query);
+        if (update.message?.photo) await handleTelegramReceipt(update.message);
+      }
+    } catch (err) {
+      console.error("Telegram polling error:", err.message);
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
 }
 
 // ===============================
@@ -310,10 +484,11 @@ app.post(
           req.file.path,
           req.file.originalname,
           req.file.mimetype,
-          message
+          message,
+          receiptUploadKeyboard(clean(req.body["Order Number"]))
         );
       } else {
-        await sendTelegramMessage(message);
+        await sendTelegramMessage(message, receiptUploadKeyboard(clean(req.body["Order Number"])));
       }
       // Save order + customer-facing status
       const orderNumber = clean(req.body["Order Number"]);
@@ -326,7 +501,10 @@ app.post(
         successfulTime: null,
         fields: req.body,
         telegramNotification: true,
-        telegramScreenshot: !!req.file
+        telegramScreenshot: !!req.file,
+        receiptUploaded: false,
+        receiptUploadedTime: null,
+        receiptTelegramFile: null
       };
       orders[orderNumber] = record;
       writeOrders(orders);
@@ -380,7 +558,7 @@ app.get("/api/orders/:orderNumber", (req, res) => {
     ok: true,
     orderNumber: order.orderNumber,
     customer: clean(f["Customer Name"]),
-    orderType: clean(f["Order Type"] || "Regular Loading"),
+    orderType: (String(f["Order Type"] || "").toLowerCase().includes("mlbb") || String(f["Network"] || "").toLowerCase() === "mlbb") ? "ML" : "Loading",
     network: clean(f["Network Selected"] || f["Network"]),
     mobile: clean(f["Mobile Number"]),
     userId: clean(f["MLBB User ID"]),
@@ -400,31 +578,12 @@ app.get("/api/orders/:orderNumber", (req, res) => {
 
 app.post("/api/admin/orders/:orderNumber/complete", express.json(), async (req, res) => {
   if (!adminAuthorized(req)) return res.status(401).json({ ok: false, error: "Unauthorized." });
-  const orders = readOrders();
-  const key = clean(req.params.orderNumber);
-  const order = orders[key];
-  if (!order) return res.status(404).json({ ok: false, error: "Order not found." });
-  if (order.status === "COMPLETED") return res.json({ ok: true, order });
-  order.status = "COMPLETED";
-  order.successfulTime = manilaDateTime(new Date());
-  writeOrders(orders);
-  const f = order.fields || {};
-  const msg = [
-    "🟢 ORDER COMPLETED",
-    `Order No.: ${order.orderNumber}`,
-    `Customer: ${clean(f["Customer Name"])}`,
-    `Order Type: ${clean(f["Order Type"] || "Regular Loading")}`,
-    `Network: ${clean(f["Network Selected"] || f["Network"])}`,
-    ...(String(f["Network"] || "").toLowerCase() === "mlbb" ? [`User ID: ${clean(f["MLBB User ID"])}`, `Zone ID: ${clean(f["MLBB Zone ID"])}`] : [`Mobile: ${clean(f["Mobile Number"])}`]),
-    `Promo: ${clean(f["Promo Selected"] || f["Promo"])}`,
-    `Amount: ${clean(f["Amount"])}`,
-    `Payment: ${clean(f["Payment Method"])}`,
-    `Date: ${manilaParts(new Date()).date}`,
-    `Order Time: ${order.orderTime.slice(order.orderTime.indexOf(",") + 1).trim()}`,
-    `Status: COMPLETED at ${manilaParts(new Date()).time}`
-  ].join("\\n");
-  try { await sendTelegramMessage(msg); } catch (e) { console.error("Completion Telegram notification failed:", e.message); }
-  res.json({ ok: true, order });
+  try {
+    const order = await markOrderCompleted(req.params.orderNumber);
+    res.json({ ok: true, order });
+  } catch (e) {
+    res.status(404).json({ ok: false, error: e.message });
+  }
 });
 
 // ===============================
@@ -470,6 +629,7 @@ app.listen(
     console.log(
       `Ronald E-Loading server running on port ${PORT}`
     );
+    startTelegramPolling();
   }
 );
 

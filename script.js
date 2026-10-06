@@ -577,6 +577,8 @@ $("orderForm").addEventListener("submit",async e=>{
     status.textContent="Order submitted successfully! Your order is processing. Thank you, come again!";
     const successModal=$("successModal");
     if(successModal){
+      $("successOrderNumber").textContent=$("orderNo").value;
+      $("successModalTitle").textContent="Order submitted successfully!";
       successModal.hidden=false;
       successModal.setAttribute("aria-hidden","false");
     }
@@ -604,6 +606,15 @@ fillNetworks();renderPromos();
 
 
 window.addEventListener("DOMContentLoaded",()=>{
+  const copyBtn=$("copyOrderNumber");
+  if(copyBtn){
+    copyBtn.addEventListener("click",async()=>{
+      const no=$("successOrderNumber").textContent.trim();
+      if(!no || no==="—") return;
+      try{ await navigator.clipboard.writeText(no); copyBtn.textContent="✅ COPIED"; setTimeout(()=>copyBtn.textContent="📋 COPY ORDER NUMBER",1500); }
+      catch(e){ alert("Order Number: " + no); }
+    });
+  }
   const successModal=$("successModal");
   const successModalOk=$("successModalOk");
   if(!successModal || !successModalOk) return;
@@ -698,8 +709,7 @@ if($("mlOrderNo")){
       const successModal=$("successModal");
       if(successModal){
         $("successModalTitle").textContent="Order submitted successfully!";
-        const modalText=successModal.querySelector(".success-modal-box p");
-        if(modalText) modalText.textContent="YOUR ORDER IS PROCESSING NOW, PLEASE WAIT YOUR ORDER A FEW MINUTES.";
+        $("successOrderNumber").textContent=$("mlOrderNo").value;
         successModal.hidden=false;
         successModal.setAttribute("aria-hidden","false");
       }
@@ -728,17 +738,31 @@ if (trackBtn) {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "Order not found.");
       const isML = String(d.orderType).toLowerCase().includes("mlbb") || String(d.network).toLowerCase() === "mlbb";
-      result.innerHTML = `<b>Order Status</b><p><strong>${d.status === "COMPLETED" ? "🟢 ORDER COMPLETED" : "🟡 ORDER PROCESSING"}</strong><br><br>
-        <b>Order No.:</b> ${escapeTrack(d.orderNumber)}<br>
-        <b>Customer:</b> ${escapeTrack(d.customer)}<br>
-        <b>Order Type:</b> ${escapeTrack(d.orderType)}<br>
-        <b>Network:</b> ${escapeTrack(d.network)}<br>
-        ${isML ? `<b>User ID:</b> ${escapeTrack(d.userId)}<br><b>Zone ID:</b> ${escapeTrack(d.zoneId)}<br>` : `<b>Mobile:</b> ${escapeTrack(d.mobile)}<br>`}
-        <b>Promo:</b> ${escapeTrack(d.promo)}<br>
-        <b>Amount:</b> ${escapeTrack(d.amount)}<br>
-        <b>Payment:</b> ${escapeTrack(d.payment)}<br>
-        <b>Order Time:</b> ${escapeTrack(d.orderTime)}<br>
-        <b>Status:</b> ${escapeTrack(d.status)}${d.successfulTime ? `<br><b>Successful Time:</b> ${escapeTrack(d.successfulTime)}` : ""}</p>`;
+      const completed = d.status === "COMPLETED";
+      const maskMobile = (v) => String(v ?? "").trim() || "—";
+      const receiptCustomer = String(d.customer ?? "").trim() || "Customer";
+      result.innerHTML = `<div class="order-result-card receipt-card ${completed ? "completed" : "processing"}">
+        <div class="receipt-brand">RONALD E-LOADING BUSINESS STATION<small>OFFICIAL ORDER RECEIPT</small></div>
+        <div class="receipt-status ${completed ? "done" : "pending"}">${completed ? "🟢 ORDER COMPLETED" : "🟡 ORDER PROCESSING"}</div>
+        ${completed ? `<div class="success-proof">✅ SUCCESSFUL LOAD PROOF<small>Verified by Ronald E-Loading Business Station</small></div>` : ""}
+        <div class="receipt-meta"><span>Order No.</span><b>${escapeTrack(d.orderNumber)}</b></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-details">
+          <div><span>Customer</span><b>${escapeTrack(receiptCustomer)}</b></div>
+          <div><span>Order Type</span><b>${escapeTrack(d.orderType)}</b></div>
+          <div><span>Network</span><b>${escapeTrack(d.network)}</b></div>
+          ${isML ? `<div><span>User ID</span><b>${escapeTrack(d.userId)}</b></div><div><span>Zone ID</span><b>${escapeTrack(d.zoneId)}</b></div>` : `<div><span>Mobile</span><b>${escapeTrack(maskMobile(d.mobile))}</b></div>`}
+          <div><span>Promo</span><b>${escapeTrack(d.promo)}</b></div>
+          <div><span>Amount</span><b>${escapeTrack(d.amount)}</b></div>
+          <div><span>Payment</span><b>${escapeTrack(d.payment || "Paid")}</b></div>
+          <div><span>Order Time</span><b>${escapeTrack(d.orderTime)}</b></div>
+          <div><span>Status</span><b>${escapeTrack(d.status)}</b></div>
+          ${d.successfulTime ? `<div><span>Successful Time</span><b>${escapeTrack(d.successfulTime)}</b></div>` : ""}
+        </div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-note">Official customer/reseller proof of successful loading. Keep this receipt together with your Order Number.</div>
+        ${completed ? `<button type="button" class="primary-btn receipt-print-btn" onclick="window.print()">🧾 PRINT / SAVE RECEIPT</button>` : ""}
+      </div>`;
     } catch (err) { result.innerHTML = `<b>Order Status</b><p>${escapeTrack(err.message)}</p>`; }
   });
 }
