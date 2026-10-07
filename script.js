@@ -485,7 +485,30 @@ const paymentDetails={
 function paymentBoxHTML(method){
   if(!method)return "<b>Payment details</b><p>Choose a payment method to display the account details.</p>";
   const d=paymentDetails[method];
-  return `<b>${method}</b><p>${d.details}</p><button type="button" class="qr-btn" onclick="toggleQR(this)">Show QR Code</button><div class="qr-preview" hidden><img src="${d.qr}" alt="${method} QR Code"></div>`;
+  const copyNumber=(d.details.match(/(?:\d[\d\s-]{5,})/g)||[]).pop()?.replace(/\D/g,"") || "";
+  const copyButton=copyNumber ? `<button type="button" class="copy-mop-btn" data-copy="${copyNumber}" onclick="copyMOP(this)">Copy MOP Number</button>` : "";
+  return `<b>${method}</b><p>${d.details}</p>${copyButton}<button type="button" class="qr-btn" onclick="toggleQR(this)">Show QR Code</button><div class="qr-preview" hidden><img src="${d.qr}" alt="${method} QR Code"><a class="qr-download-btn" href="${d.qr}" download="${method.replace(/\s+/g,"-").toLowerCase()}-qr-code.jpg" onclick="downloadQR(event,this)">Download QR Code</a></div>`;
+}
+
+async function copyMOP(button){
+  const number=button.dataset.copy || "";
+  if(!number)return;
+  const original=button.textContent;
+  try{
+    await navigator.clipboard.writeText(number);
+  }catch(error){
+    const temp=document.createElement("textarea");
+    temp.value=number;
+    temp.style.position="fixed";
+    temp.style.opacity="0";
+    document.body.appendChild(temp);
+    temp.focus();
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+  }
+  button.textContent="Copied!";
+  setTimeout(()=>button.textContent=original,1500);
 }
 
 function toggleQR(button){
@@ -493,6 +516,27 @@ function toggleQR(button){
   const isHidden=preview.hasAttribute("hidden");
   if(isHidden){preview.removeAttribute("hidden");button.textContent="Hide QR Code";}
   else{preview.setAttribute("hidden","");button.textContent="Show QR Code";}
+}
+
+async function downloadQR(event, link){
+  event.preventDefault();
+  const url=link.getAttribute("href");
+  const filename=link.getAttribute("download") || "qr-code.jpg";
+  try{
+    const response=await fetch(url,{cache:"no-store"});
+    if(!response.ok) throw new Error("Download failed");
+    const blob=await response.blob();
+    const blobUrl=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=blobUrl;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(blobUrl),1000);
+  }catch(error){
+    window.open(url,"_blank","noopener");
+  }
 }
 
 const $=id=>document.getElementById(id);
