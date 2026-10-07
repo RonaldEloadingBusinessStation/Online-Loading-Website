@@ -485,9 +485,12 @@ const paymentDetails={
 function paymentBoxHTML(method){
   if(!method)return "<b>Payment details</b><p>Choose a payment method to display the account details.</p>";
   const d=paymentDetails[method];
+  const lines=d.details.split("\n");
   const copyNumber=(d.details.match(/(?:\d[\d\s-]{5,})/g)||[]).pop()?.replace(/\D/g,"") || "";
-  const copyButton=copyNumber ? `<button type="button" class="copy-mop-btn" data-copy="${copyNumber}" onclick="copyMOP(this)">Copy MOP Number</button>` : "";
-  return `<b>${method}</b><p>${d.details}</p>${copyButton}<button type="button" class="qr-btn" onclick="toggleQR(this)">Show QR Code</button><div class="qr-preview" hidden><img src="${d.qr}" alt="${method} QR Code"><a class="qr-download-btn" href="${d.qr}" download="${method.replace(/\s+/g,"-").toLowerCase()}-qr-code.jpg" onclick="downloadQR(event,this)">Download QR Code</a></div>`;
+  const detailText=lines[0] || "";
+  const numberText=lines.slice(1).join(" ");
+  const copyButton=copyNumber ? `<div class="mop-row"><span class="mop-number">${numberText}</span><button type="button" class="copy-mop-btn" data-copy="${copyNumber}" onclick="copyMOP(this)">📋 COPY</button></div>` : `<p>${d.details}</p>`;
+  return `<b>${method}</b>${copyNumber ? `<p class="mop-name">${detailText}</p>${copyButton}` : ""}<button type="button" class="qr-btn" onclick="toggleQR(this)">Show QR Code</button><div class="qr-preview" hidden><img src="${d.qr}" alt="${method} QR Code"><a class="qr-download-btn" href="${d.qr}" download="${method.replace(/\s+/g,"-").toLowerCase()}-qr-code.jpg" onclick="downloadQR(event,this)">Download QR Code</a></div>`;
 }
 
 async function copyMOP(button){
