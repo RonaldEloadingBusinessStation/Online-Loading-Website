@@ -3,7 +3,7 @@ const NETWORKS=["SMART","TNT","DITO","GLOBE","TM","GOMO","GLOBE AT HOME","GFIBER
 const promos={
 
 SMART:[
-["EXAMPL SITE 10000 (formely 59)","5GB + 3GB 5G Data + Unli Calls & Texts (3656 Days)",19726228,true],
+["EXAMPLE PROMO SITE 10000 (formely 59)","56GB + 9GB 5G Data + Unli Calls & Texts (3656 Days)",62218,true],
 ["POWER ALL 50 (formely 59)","5GB + 3GB 5G Data + Unli Calls & Texts (3 Days)",57,true],
 ["POWER ALL KHAN ACADEMY 99","Unli Khan Academy Access + 10GB + Unli Calls & Texts (7 Days)",96,false],
 ["NEW POWER ALL GRIND 99","7GB Google Drive, Google Meet & more + 10GB Shareable Data + 4GB 5G Data + Unli Calls & Texts (7 Days)",96,true],
