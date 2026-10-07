@@ -475,11 +475,25 @@ CIGNAL:[
 ],};
 
 const paymentDetails={
-"GCash":"Ronald P.\n09919018849",
-"Maya":"Ronald P.\n09917019078",
-"GoTyme Bank":"Ronald P.\nAccount No. 014261416464",
-"MariBank":"Ronald P.\nAccount No. 16065980076"
+"GCash":{details:"Ronald P.\n09919018849",qr:"assets/qr/gcash.jpg"},
+"Maya":{details:"Ronald P.\n09917019078",qr:"assets/qr/maya.jpg"},
+"GoTyme Bank":{details:"Ronald P.\nAccount No. 014261416464",qr:"assets/qr/gotyme.jpg"},
+"MariBank":{details:"Ronald P.\nAccount No. 16065980076",qr:"assets/qr/maribank.jpg"},
+"QR PH":{details:"For other e-wallets and bank accounts",qr:"assets/qr/qrph.png"}
 };
+
+function paymentBoxHTML(method){
+  if(!method)return "<b>Payment details</b><p>Choose a payment method to display the account details.</p>";
+  const d=paymentDetails[method];
+  return `<b>${method}</b><p>${d.details}</p><button type="button" class="qr-btn" onclick="toggleQR(this)">Show QR Code</button><div class="qr-preview" hidden><img src="${d.qr}" alt="${method} QR Code"></div>`;
+}
+
+function toggleQR(button){
+  const preview=button.nextElementSibling;
+  const isHidden=preview.hasAttribute("hidden");
+  if(isHidden){preview.removeAttribute("hidden");button.textContent="Hide QR Code";}
+  else{preview.setAttribute("hidden","");button.textContent="Show QR Code";}
+}
 
 const $=id=>document.getElementById(id);
 let activeNetwork="";
@@ -535,7 +549,7 @@ $("promo").onchange=()=>{
   const o=$("promo").selectedOptions[0];if(!o||!o.value)return;
   updateSummary(decodeURIComponent(o.value),Number(o.dataset.price),$("network").value);
 };
-$("payment").onchange=()=>{$("paymentBox").innerHTML=$("payment").value?`<b>${$("payment").value}</b><p>${paymentDetails[$("payment").value]}</p>`:"<b>Payment details</b><p>Choose a payment method to display the account details.</p>"};
+$("payment").onchange=()=>{$("paymentBox").innerHTML=paymentBoxHTML($("payment").value)};
 $("search").oninput=renderPromos;
 $("orderNo").value=orderNumber();
 
@@ -680,7 +694,7 @@ document.querySelectorAll(".ml-select-btn").forEach(btn=>btn.addEventListener("c
 
 if($("mlOrderNo")){
   $("mlOrderNo").value=mlOrderNumber();
-  $("mlPayment").onchange=()=>{$("mlPaymentBox").innerHTML=$("mlPayment").value?`<b>${$("mlPayment").value}</b><p>${mlPaymentDetails[$("mlPayment").value]}</p>`:"<b>Payment details</b><p>Choose a payment method to display the account details.</p>"};
+  $("mlPayment").onchange=()=>{$("mlPaymentBox").innerHTML=paymentBoxHTML($("mlPayment").value)};
   $("mlUserId").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
   $("mlZoneId").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
   $("mlCustomerName").addEventListener("input",()=>{if($("mlPromoField").value) updateMlSummary($("mlPromoField").value,Number($("mlAmountField").value.replace(/[^0-9.]/g,"")))});
