@@ -738,11 +738,12 @@ if (trackBtn) {
       const res = await fetch(`https://online-loading-website.onrender.com/api/orders/${encodeURIComponent(no)}`);
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "Order not found.");
-      const isML = String(d.orderType).toLowerCase().includes("mlbb") || String(d.network).toLowerCase() === "mlbb";
-      const completed = d.status === "COMPLETED";
       window.currentReceiptData = d;
-      const maskMobile = (v) => String(v ?? "").trim() || "—";
+      const isML = String(d.orderType || "").toLowerCase().includes("mlbb") || String(d.network || "").toLowerCase() === "mlbb";
+      const completed = String(d.status || "").toUpperCase() === "COMPLETED";
       const receiptCustomer = String(d.customer ?? "").trim() || "Customer";
+      const orderTypeLabel = isML ? "ML" : "Loading";
+      const mobile = String(d.mobile ?? d.mobileNumber ?? "").trim() || "—";
       result.innerHTML = `<div class="order-result-card receipt-card ${completed ? "completed" : "processing"}">
         <div class="receipt-brand">RONALD E-LOADING BUSINESS STATION<small>OFFICIAL ORDER RECEIPT</small></div>
         <div class="receipt-status ${completed ? "done" : "pending"}">${completed ? "🟢 ORDER COMPLETED" : "🟡 ORDER PROCESSING"}</div>
@@ -751,9 +752,9 @@ if (trackBtn) {
         <div class="receipt-divider"></div>
         <div class="receipt-details">
           <div><span>Customer</span><b>${escapeTrack(receiptCustomer)}</b></div>
-          <div><span>Order Type</span><b>${escapeTrack(d.orderType)}</b></div>
+          <div><span>Order Type</span><b>${orderTypeLabel}</b></div>
           <div><span>Network</span><b>${escapeTrack(d.network)}</b></div>
-          ${isML ? `<div><span>User ID</span><b>${escapeTrack(d.userId)}</b></div><div><span>Zone ID</span><b>${escapeTrack(d.zoneId)}</b></div>` : `<div><span>Mobile</span><b>${escapeTrack(maskMobile(d.mobile))}</b></div>`}
+          ${isML ? `<div><span>User ID</span><b>${escapeTrack(d.userId)}</b></div><div><span>Zone ID</span><b>${escapeTrack(d.zoneId)}</b></div>` : `<div><span>Mobile</span><b>${escapeTrack(mobile)}</b></div>`}
           <div><span>Promo</span><b>${escapeTrack(d.promo)}</b></div>
           <div><span>Amount</span><b>${escapeTrack(d.amount)}</b></div>
           <div><span>Payment</span><b>${escapeTrack(d.payment || "Paid")}</b></div>
@@ -763,32 +764,99 @@ if (trackBtn) {
         </div>
         <div class="receipt-divider"></div>
         <div class="receipt-note">Official customer/reseller proof of successful loading. Keep this receipt together with your Order Number.</div>
-        ${completed ? `<div class="receipt-actions"><button type="button" class="primary-btn receipt-print-btn" onclick="downloadReceiptImage()">🧾 SAVE RECEIPT TO PHONE</button><button type="button" class="secondary-btn receipt-print-btn" onclick="window.print()">🖨️ PRINT RECEIPT</button></div>` : ""}
+        ${completed ? `<div class="receipt-actions"><button type="button" class="primary-btn receipt-print-btn" onclick="downloadReceiptImage()">🧾 SAVE RECEIPT TO PHONE</button><button type="button" class="secondary-btn receipt-print-btn" onclick="window.print()">🖨 PRINT RECEIPT</button></div>` : ""}
       </div>`;
     } catch (err) { result.innerHTML = `<b>Order Status</b><p>${escapeTrack(err.message)}</p>`; }
   });
 }
 
 function downloadReceiptImage(){
-  const d=window.currentReceiptData||{};
-  const isML=String(d.orderType||'').toLowerCase().includes('mlbb')||String(d.network||'').toLowerCase()==='mlbb';
-  const esc=(v)=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const rows=[
-    ['Customer',d.customer||'Customer'],['Order Type',d.orderType||''],['Network',d.network||''],
-    ...(isML?[['User ID',d.userId||''],['Zone ID',d.zoneId||'']]:[['Mobile',d.mobile||'']]),
-    ['Promo',d.promo||''],['Amount',d.amount||''],['Payment',d.payment||'Paid'],['Order Time',d.orderTime||''],['Status',d.status||''],
-    ...(d.successfulTime?[['Successful Time',d.successfulTime]]:[])
+  const d = window.currentReceiptData || {};
+  if (!d.orderNumber) { alert("Please track your Order Number first."); return; }
+  const isML = String(d.orderType || "").toLowerCase().includes("mlbb") || String(d.network || "").toLowerCase() === "mlbb";
+  const esc = (v) => String(v ?? "—").replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rows = [
+    ["Customer", d.customer || "Customer"],
+    ["Order Type", isML ? "ML" : "Loading"],
+    ["Network", d.network || "—"],
+    ...(isML ? [["User ID", d.userId || "—"], ["Zone ID", d.zoneId || "—"]] : [["Mobile", d.mobile || d.mobileNumber || "—"]]),
+    ["Promo", d.promo || "—"], ["Amount", d.amount || "—"], ["Payment", d.payment || "Paid"],
+    ["Order Time", d.orderTime || "—"], ["Status", d.status || "—"],
+    ...(d.successfulTime ? [["Successful Time", d.successfulTime]] : [])
   ];
-  const lineH=52, top=330, height=Math.max(900,top+rows.length*lineH+220), w=900;
-  let y=top;
-  const svgRows=rows.map(([k,v])=>{const out=`<text x="70" y="${y}" font-size="26" fill="#667085">${esc(k)}</text><text x="830" y="${y}" text-anchor="end" font-size="27" font-weight="700" fill="#101828">${esc(v)}</text><line x1="70" y1="${y+16}" x2="830" y2="${y+16}" stroke="#eaecf0"/>`; y+=lineH; return out;}).join('');
-  const order=esc(d.orderNumber||'');
-  const status=d.status==='COMPLETED'?'ORDER COMPLETED':'ORDER PROCESSING';
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}"><rect width="100%" height="100%" fill="#f2f4f7"/><rect x="35" y="35" width="830" height="${height-70}" rx="18" fill="#fff" stroke="#d0d5dd" stroke-width="2"/><text x="450" y="95" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" font-weight="800" fill="#101828">RONALD E-LOADING BUSINESS STATION</text><text x="450" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#667085">OFFICIAL LOADING RECEIPT</text><line x1="70" y1="160" x2="830" y2="160" stroke="#98a2b3" stroke-dasharray="8 8"/><text x="450" y="215" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#067647">✓ ${status}</text><text x="450" y="265" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="800" fill="#101828">${order}</text><line x1="70" y1="290" x2="830" y2="290" stroke="#98a2b3" stroke-dasharray="8 8"/>${svgRows}<line x1="70" y1="${y+8}" x2="830" y2="${y+8}" stroke="#98a2b3" stroke-dasharray="8 8"/><text x="450" y="${y+65}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#667085">Keep this receipt with your Order Number.</text><text x="450" y="${y+98}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#101828">RONALD E-LOADING BUSINESS STATION</text></svg>`;
-  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
-  const url=URL.createObjectURL(blob); const img=new Image();
-  img.onload=()=>{const c=document.createElement('canvas');c.width=w;c.height=height;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);URL.revokeObjectURL(url);c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Receipt-${order||'Order'}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);},'image/png');};
-  img.src=url;
+  const width = 900, rowH = 58, height = 250 + rows.length * rowH;
+  const rowSvg = rows.map((r,i) => { const y=245+i*rowH; return `<text x="70" y="${y}" font-family="Arial,sans-serif" font-size="25" fill="#667085">${esc(r[0])}</text><text x="830" y="${y}" text-anchor="end" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#101828">${esc(r[1])}</text>`; }).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#ffffff"/><text x="70" y="65" font-family="Arial,sans-serif" font-size="31" font-weight="800" fill="#101828">RONALD E-LOADING BUSINESS STATION</text><text x="70" y="105" font-family="Arial,sans-serif" font-size="20" fill="#667085">OFFICIAL ORDER RECEIPT</text><rect x="55" y="130" width="790" height="65" rx="12" fill="#f2f4f7"/><text x="75" y="172" font-family="Arial,sans-serif" font-size="24" fill="#667085">ORDER NO.</text><text x="825" y="172" text-anchor="end" font-family="Arial,sans-serif" font-size="27" font-weight="800" fill="#101828">${esc(d.orderNumber)}</text>${rowSvg}<text x="70" y="${height-30}" font-family="Arial,sans-serif" font-size="17" fill="#667085">Keep this receipt together with your Order Number.</text></svg>`;
+  const blob = new Blob([svg], {type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob); const img = new Image();
+  img.onload = () => {
+    const canvas=document.createElement("canvas"); canvas.width=width*2; canvas.height=height*2;
+    const ctx=canvas.getContext("2d"); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); URL.revokeObjectURL(url);
+    canvas.toBlob(async (png) => {
+      if (!png) { alert("Unable to create receipt image."); return; }
+      const filename=`${d.orderNumber}-receipt.png`;
+      const file = new File([png], filename, {type:"image/png"});
+      // Keep the normal Chrome download behavior first.
+      const a=document.createElement("a"); const downloadUrl=URL.createObjectURL(png); a.href=downloadUrl; a.download=filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(downloadUrl),3000);
+      // Facebook/Facebook Lite may ignore the download attribute. If sharing is supported, offer the phone share/save sheet.
+      setTimeout(async()=>{
+        if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+          try { await navigator.share({files:[file], title:"Receipt", text:"RONALD E-LOADING BUSINESS STATION receipt"}); return; } catch(e) {}
+        }
+        // Final fallback: show the actual PNG in a new page so it can be long-pressed and saved.
+        const imageUrl=URL.createObjectURL(png);
+        const w=window.open(imageUrl,"_blank");
+        if (!w) { window.location.href=imageUrl; }
+        alert("Kung hindi na-download sa Facebook, buksan ang receipt at i-long press ang image, pagkatapos piliin ang Save/Download image.");
+      },700);
+    },"image/png");
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url); alert("Unable to create receipt image.");}; img.src=url;
 }
 
 function escapeTrack(v){return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+// V17: reveal sections/cards smoothly as the customer scrolls.
+window.addEventListener("DOMContentLoaded",()=>{
+  const targets=document.querySelectorAll(".section,.promo,.network-card,.feature-item,.hero-card,.order-section form,.mlbb-launcher");
+  targets.forEach((el,i)=>{
+    if(el.closest(".bottom-nav")) return;
+    el.classList.add("reveal");
+    if(i % 5 === 1) el.classList.add("reveal-left");
+    if(i % 5 === 3) el.classList.add("reveal-right");
+  });
+  if(!("IntersectionObserver" in window)){
+    targets.forEach(el=>el.classList.add("is-visible"));
+    return;
+  }
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add("is-visible");
+        io.unobserve(entry.target);
+      }
+    });
+  },{threshold:.08,rootMargin:"0px 0px -35px 0px"});
+  targets.forEach(el=>io.observe(el));
+
+  // App-style bottom navigation: highlight the section currently on screen.
+  const navLinks=[...document.querySelectorAll('.bottom-nav a')];
+  const navSections=['home','promos','order','order'];
+  const updateNav=()=>{
+    const y=window.scrollY+window.innerHeight*0.35;
+    let active='home';
+    ['home','promos','order','mlbb-topup','track-order','features'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el && el.offsetTop<=y) active=id;
+    });
+    navLinks.forEach((a,i)=>{
+      const href=a.getAttribute('href')||'';
+      const target=href.slice(1);
+      a.classList.toggle('active', target===active || (i===3 && active==='order'));
+    });
+  };
+  updateNav();
+  window.addEventListener('scroll',updateNav,{passive:true});
+});
