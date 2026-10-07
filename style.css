@@ -73,3 +73,5 @@ footer{text-align:center;padding:38px 5%;margin-top:22px;background:#111827;colo
 .dark .receipt-card{background:#151c27;border-color:#344154}.dark .receipt-brand,.dark .receipt-meta b,.dark .receipt-details b{color:#fff}.dark .receipt-brand small,.dark .receipt-meta span,.dark .receipt-details span,.dark .receipt-note{color:#aeb8c7}.dark .receipt-divider{border-color:#475467}
 
 .receipt-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.receipt-actions button{flex:1;min-width:180px}.secondary-btn{border:1px solid #d0d5dd;background:#fff;color:#101828;padding:12px 16px;border-radius:10px;font-weight:700;cursor:pointer}
+
+.qr-preview{width:100%;max-width:320px;margin:12px auto 0;overflow:hidden}.qr-preview img{display:block;width:100%;max-width:320px;height:auto;max-height:320px;object-fit:contain;margin:0 auto;border-radius:12px;border:1px solid #e5e7eb;background:#fff}
