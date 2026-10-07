@@ -118,7 +118,7 @@ function makeMessage(body) {
   const zoneId = clean(body["MLBB Zone ID"] || body["Zone ID"] || body["zoneId"] || "");
 
   return [
-    "🔔 MAY BAGONG ORDER SA SITE MO BOSS!",
+    "🔔 BOSS MAY BAGONG ORDER SA SITE MO!",
 
     `Order No.: ${clean(
       body["Order Number"]
