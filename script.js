@@ -1,3 +1,26 @@
+
+// Custom app alert: always visible and tappable in light or dark mode.
+(function(){
+  function installAlert(){
+    if(document.getElementById('appAlertOverlay')) return;
+    const wrap=document.createElement('div');
+    wrap.id='appAlertOverlay';
+    wrap.innerHTML=`<div class="app-alert-box" role="alertdialog" aria-modal="true" aria-labelledby="appAlertMessage"><div class="app-alert-title">Notice</div><div id="appAlertMessage" class="app-alert-message"></div><button type="button" id="appAlertOk">OK</button></div>`;
+    document.body.appendChild(wrap);
+    const close=()=>{wrap.classList.remove('show');};
+    document.getElementById('appAlertOk').addEventListener('click',close);
+    wrap.addEventListener('click',e=>{if(e.target===wrap) close();});
+  }
+  window.addEventListener('DOMContentLoaded',installAlert);
+  window.alert=function(message){
+    installAlert();
+    const wrap=document.getElementById('appAlertOverlay');
+    document.getElementById('appAlertMessage').textContent=String(message ?? '');
+    wrap.classList.add('show');
+    setTimeout(()=>document.getElementById('appAlertOk')?.focus(),0);
+  };
+})();
+
 const NETWORKS=["GLOBE","TM","DITO","SMART","TNT","GOMO","GFIBER","GLOBE AT HOME","PLDT","CIGNAL","GTM RETAILER BALANCE","SMART LOAD WALLET RETAILER BALANCE"];
 
 const promos={
@@ -548,8 +571,28 @@ let activeNetwork="";
 function money(n){return "₱"+Number(n).toLocaleString("en-PH")}
 function orderNumber(){const d=new Date();return `REL-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}-${Math.floor(1000+Math.random()*9000)}`}
 function fillNetworks(){
-  $("network").innerHTML='<option value="">Select network</option>'+NETWORKS.map(n=>`<option>${n}</option>`).join("");
-  $("networkGrid").innerHTML=NETWORKS.map(n=>`<button class="network-card ${activeNetwork===n?"active":""}" data-net="${n}">${n}</button>`).join("");
+  const displayNames={
+    GLOBE:"Globe",
+    TM:"TM",
+    DITO:"DITO",
+    SMART:"Smart",
+    TNT:"TNT",
+    GOMO:"GOMO",
+    GFIBER:"GFIBER Prepaid",
+    "GLOBE AT HOME":"Globe At Home",
+    PLDT:"PLDT",
+    CIGNAL:"CIGNAL",
+    "GTM RETAILER BALANCE":"GTM Retailer Balance",
+    "SMART LOAD WALLET RETAILER BALANCE":"Smart Load Wallet"
+  };
+  const colorClass={
+    GLOBE:"net-globe", TM:"net-tm", DITO:"net-dito", SMART:"net-smart", TNT:"net-tnt",
+    GOMO:"net-gomo", GFIBER:"net-gfiber", "GLOBE AT HOME":"net-globe-home", PLDT:"net-pldt",
+    CIGNAL:"net-cignal", "GTM RETAILER BALANCE":"net-gtm",
+    "SMART LOAD WALLET RETAILER BALANCE":"net-smart-wallet"
+  };
+  $("network").innerHTML='<option value="">Select network</option>'+NETWORKS.map(n=>`<option value="${n}">${displayNames[n]||n}</option>`).join("");
+  $("networkGrid").innerHTML=NETWORKS.map(n=>`<button class="network-card ${colorClass[n]||""} ${activeNetwork===n?"active":""}" data-net="${n}"><span class="network-name">${displayNames[n]||n}</span></button>`).join("");
   document.querySelectorAll(".network-card").forEach(b=>b.onclick=()=>{activeNetwork=b.dataset.net;$("network").value=activeNetwork;$("search").value="";renderPromos();$("promoGrid").scrollIntoView({behavior:"smooth",block:"start"});});
   const logos={
 SMART:"assets/networks/smart.png",
@@ -573,12 +616,45 @@ document.querySelectorAll(".network-card").forEach(b=>{
   }
 });
 }
+function promoMeta(p){
+  const text=String(p[1]||"");
+  const valid=(text.match(/\((\d+\s*(?:day|days|month|months|year|years))\)/i)||[])[1]||"";
+  const clean=text.replace(/\s*\([^)]*(?:day|days|month|months|year|years)[^)]*\)\s*$/i,"").trim();
+  const parts=clean.split(/\s*;\s*|\s+\+\s+/).map(x=>x.trim()).filter(Boolean);
+  let data="";
+  const m=clean.match(/(?:TOTAL\s+)?(\d+(?:\.\d+)?)\s*GB/i);
+  if(m) data=m[1]+"GB";
+  else if(/unli/i.test(clean)) data="UNLI";
+  else if(/regular load/i.test(p[0])) data="LOAD";
+  else data="PROMO";
+  return {valid,features:parts.slice(0,3),data};
+}
+const colorClassForPromo={
+  GLOBE:"globe", TM:"tm", DITO:"dito", SMART:"smart", TNT:"tnt",
+  GOMO:"gomo", GFIBER:"gfiber", "GLOBE AT HOME":"globe-home", PLDT:"pldt",
+  CIGNAL:"cignal", "GTM RETAILER BALANCE":"gtm",
+  "SMART LOAD WALLET RETAILER BALANCE":"smart-wallet"
+};
 function renderPromos(){
   const net=activeNetwork||$("network").value||"";
   const q=$("search").value.toLowerCase().trim();
   const list=(promos[net]||[]).filter(p=>(p[0]+" "+p[1]).toLowerCase().includes(q));
-  $("promoGrid").innerHTML=list.length?list.map((p,i)=>`<article class="promo"><h3>${p[0]} ${p[3]?'<span class="new">NEW!</span>':""}</h3><p>${p[1]}</p><div class="price">${money(p[2])}</div><button class="select-btn" data-promo="${encodeURIComponent(p[0])}" data-price="${p[2]}">Select Promo</button></article>`).join(""):"<p>No promo found for this network.</p>";
-  document.querySelectorAll(".select-btn").forEach(b=>b.onclick=()=>selectPromo(decodeURIComponent(b.dataset.promo),Number(b.dataset.price),net));
+  const title=$("networkTitle");
+  if(title) title.textContent=net ? `${net === "GLOBE" ? "Globe Prepaid" : net} Promos (${list.length})` : "Choose Network";
+  $("promoGrid").innerHTML=list.length?list.map(p=>{
+    const meta=promoMeta(p);
+    const features=meta.features.length?meta.features.map((f,i)=>`<li><span class="feature-dot">${i===0?'⌁':i===1?'▤':'◇'}</span><span>${f}</span></li>`).join(""):`<li><span class="feature-dot">◇</span><span>Promo details available</span></li>`;
+    return `<article class="promo globe-promo promo-net-${(colorClassForPromo[net]||"globe")}">
+      <div class="promo-top"><strong>${meta.data}</strong><b>${money(p[2])}</b></div>
+      <div class="promo-info">
+        <h3>${p[0]} ${p[3]?'<span class="new">NEW!</span>':""}</h3>
+        ${meta.valid?`<div class="promo-valid">Valid for ${meta.valid}</div>`:""}
+      </div>
+      <div class="promo-features"><ul>${features}</ul></div>
+      <div class="promo-bottom"><div class="price">${money(p[2])}</div><button class="select-btn" data-promo="${encodeURIComponent(p[0])}" data-price="${p[2]}">Select Promo</button></div>
+    </article>`;
+  }).join(""):"<p>No promo found for this network.</p>";
+  document.querySelectorAll("#promoGrid .select-btn").forEach(b=>b.onclick=()=>selectPromo(decodeURIComponent(b.dataset.promo),Number(b.dataset.price),net));
   const opts=(promos[net]||[]).map(p=>`<option value="${encodeURIComponent(p[0])}" data-price="${p[2]}">${p[0]} — ${money(p[2])}</option>`).join("");
   $("promo").innerHTML='<option value="">Select promo</option>'+opts;
 }
@@ -642,6 +718,9 @@ $("orderForm").addEventListener("submit",async e=>{
       $("successModalTitle").textContent="Order submitted successfully!";
       successModal.hidden=false;
       successModal.setAttribute("aria-hidden","false");
+      successModal.style.display="flex";
+      document.body.classList.add("modal-open");
+      requestAnimationFrame(()=>{$("successModalOk")?.focus();});
     }
     
     $("orderForm").reset();
@@ -682,6 +761,8 @@ window.addEventListener("DOMContentLoaded",()=>{
   successModalOk.addEventListener("click",()=>{
     successModal.hidden=true;
     successModal.setAttribute("aria-hidden","true");
+    successModal.style.display="none";
+    document.body.classList.remove("modal-open");
     $("orderForm").reset();
     $("orderNo").value=orderNumber();
     activeNetwork="";
